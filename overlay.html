@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IRL overlay — Phuket</title>
+<style>
+/*
+  ПАРАМЕТРЫ В ССЫЛКЕ (все необязательные):
+  ?room=ID      id чата Kick (chatroom id)
+  ?chan=ID      id канала Kick (для попытки ловить подарки/донаты)
+  ?demo=1       демо: фейковый чат и донаты, чтобы посмотреть оформление
+  ?bg=1         шахматный фон для проверки прозрачности
+  ?loc=Phuket   город, ?country=Thailand  страна
+  ?goal=5000    цель по донатам, ?cur=$ валюта
+  ?tz=Asia/Bangkok  часовой пояс, ?lat=7.88&lon=98.39 координаты для погоды
+*/
+:root{
+  --sea:#19E3D0; --pink:#FF3D81; --sun:#FFB02E; --ink:#0B1020; --white:#fff;
+  --font: ui-rounded,"SF Pro Rounded","SF Pro Display",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;font-family:var(--font);color:#fff}
+body.checker{background:#6d7a8a linear-gradient(45deg,#00000022 25%,transparent 25%,transparent 75%,#00000022 75%),linear-gradient(45deg,#00000022 25%,transparent 25%,transparent 75%,#00000022 75%);background-size:32px 32px;background-position:0 0,16px 16px}
+.stroke{ text-shadow:0 0 3px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.7),0 2px 14px rgba(0,0,0,.6); }
+
+/* ===== ЛОКАЦИЯ ===== */
+.loc{position:absolute;left:max(14px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));display:flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border-radius:999px;background:rgba(11,16,32,.38);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:locIn .9s cubic-bezier(.2,1.2,.3,1) both}
+@keyframes locIn{from{transform:translateX(-120%);opacity:0}to{transform:none;opacity:1}}
+.pin{width:40px;height:40px;border-radius:50%;background:linear-gradient(145deg,var(--pink),var(--sun));display:grid;place-items:center;position:relative;flex:none}
+.pin svg{width:22px;height:22px;animation:bob 1.8s ease-in-out infinite}
+.pin::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--pink);animation:ping 2.2s ease-out infinite}
+@keyframes bob{50%{transform:translateY(-3px)}}
+@keyframes ping{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+.loc .t1{font-weight:900;font-size:19px;letter-spacing:-.01em;line-height:1.1}
+.loc .t2{display:flex;gap:8px;align-items:center;font-weight:700;font-size:13.5px;opacity:.92;margin-top:1px}
+.flag{display:inline-block;width:22px;height:15px;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.25);vertical-align:-2px}
+.live{display:inline-flex;align-items:center;gap:5px;font-weight:900;font-size:12px;background:#E5173F;border-radius:6px;padding:2px 7px}
+.live i{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.2}}
+
+/* ===== ЦЕЛЬ ===== */
+.goal{position:absolute;right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));width:min(230px,42vw);animation:locIn 1s .15s cubic-bezier(.2,1.2,.3,1) both;text-align:right}
+.goal .h{font-weight:900;font-size:14px;margin-bottom:5px}
+.goal .bar{height:12px;border-radius:99px;background:rgba(11,16,32,.45);overflow:hidden;box-shadow:0 0 0 1.5px rgba(255,255,255,.35)}
+.goal .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--sea),var(--pink),var(--sun));background-size:200% 100%;animation:flow 3s linear infinite;transition:width 1.2s cubic-bezier(.2,1,.3,1)}
+@keyframes flow{to{background-position:-200% 0}}
+.goal .n{font-weight:800;font-size:12.5px;margin-top:4px;opacity:.95}
+
+/* ===== ЧАТ ===== */
+.chat{position:absolute;left:max(14px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));width:min(520px,78vw);display:flex;flex-direction:column;gap:5px;justify-content:flex-end;max-height:48%}
+.m{font-size:clamp(15px,3.6vw,21px);font-weight:700;line-height:1.28;word-break:break-word;animation:msgIn .35s cubic-bezier(.2,1.2,.3,1) both;transition:opacity .6s}
+.m.old{opacity:0}
+@keyframes msgIn{from{transform:translateX(-24px);opacity:0}to{transform:none;opacity:1}}
+.m b{font-weight:900;margin-right:6px}
+.m b::after{content:":";opacity:.75}
+.m img{height:1.5em;vertical-align:-.4em;margin:0 1px}
+
+/* ===== ДОНАТЫ ===== */
+.stage{position:absolute;left:0;right:0;top:calc(max(14px,env(safe-area-inset-top)) + 72px);display:flex;justify-content:center;pointer-events:none}
+.don{display:none;padding:0 12px;max-width:92vw}
+.don.on{display:block;animation:donIn .5s cubic-bezier(.2,1.2,.3,1) both}
+.don.off{animation:donOut .4s ease-in both}
+@keyframes donIn{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes donOut{to{transform:translateY(-10px);opacity:0}}
+.dline{display:flex;align-items:baseline;gap:10px;justify-content:center;flex-wrap:wrap}
+.spark{color:var(--pink);font-size:clamp(16px,4vw,22px);animation:sp 1.4s ease-in-out infinite alternate}
+@keyframes sp{to{transform:scale(1.25) rotate(20deg)}}
+.don .who{font-weight:800;font-size:clamp(17px,4.2vw,24px)}
+.don .sum{font-weight:900;font-size:clamp(22px,5.6vw,32px);color:var(--sun);letter-spacing:-.02em}
+.don .msg{font-weight:700;font-size:clamp(14px,3.4vw,19px);margin-top:3px;text-align:center;max-width:420px;margin-inline:auto;line-height:1.25}
+.don .line{height:3px;border-radius:3px;margin:8px auto 0;width:100%;max-width:240px;background:linear-gradient(90deg,var(--sea),var(--pink));transform-origin:left;animation:shrink 6.2s linear forwards;box-shadow:0 0 6px rgba(0,0,0,.5)}
+@keyframes shrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* ===== ПОСЛЕДНИЙ ДОНАТЕР ===== */
+.last{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));text-align:right;font-weight:800;font-size:clamp(13px,3vw,17px);opacity:0;transition:opacity .6s}
+.last.on{opacity:1}
+.last span{color:var(--sun);font-weight:900}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
+</style>
+</head>
+<body>
+
+<div class="loc stroke">
+  <div class="pin"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></div>
+  <div>
+    <div class="t1" id="city">Пхукет</div>
+    <div class="t2">
+      <span class="flag" id="flag"><svg viewBox="0 0 6 4" width="22" height="15" preserveAspectRatio="none"><rect width="6" height="4" fill="#A51931"/><rect y=".67" width="6" height="2.66" fill="#F4F5F8"/><rect y="1.33" width="6" height="1.34" fill="#2D2A4A"/></svg></span>
+      <span id="country">Таиланд</span><span>·</span><span id="clock">--:--</span><span>·</span><span id="temp">--°</span>
+      <span class="live"><i></i>LIVE</span>
+    </div>
+  </div>
+</div>
+
+<div class="goal stroke" id="goal" hidden>
+  <div class="h">Цель стрима</div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="n" id="goalN"></div>
+</div>
+
+<div class="stage">
+  <div class="don" id="don">
+    <div class="dline stroke"><span class="spark">✦</span><span class="who" id="dWho"></span><span class="sum" id="dSum"></span></div>
+    <div class="msg stroke" id="dMsg"></div>
+    <div class="line"></div>
+  </div>
+</div>
+
+<div class="chat stroke" id="chat"></div>
+<div class="last stroke" id="last"></div>
+
+<script>
+const P = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+const CUR = P.get("cur") || "$";
+const GOAL = parseFloat(P.get("goal")) || 0;
+const TZ = P.get("tz") || "Asia/Bangkok";
+if (P.get("bg")) document.body.classList.add("checker");
+if (P.get("loc")) $("city").textContent = P.get("loc");
+if (P.get("country")) $("country").textContent = P.get("country");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---- время и погода (Пхукет по умолчанию) ---- */
+function tick(){ try{ $("clock").textContent = new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit",timeZone:TZ}); }catch(e){} }
+tick(); setInterval(tick, 15000);
+async function weather(){
+  try{
+    const lat = P.get("lat")||"7.8804", lon = P.get("lon")||"98.3923";
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`);
+    const j = await r.json();
+    $("temp").textContent = Math.round(j.current.temperature_2m) + "°C";
+  }catch(e){ $("temp").textContent = ""; }
+}
+weather(); setInterval(weather, 600000);
+
+/* ---- цель ---- */
+let total = 0;
+function renderGoal(){
+  if(!GOAL) return;
+  $("goal").hidden = false;
+  $("fill").style.width = Math.min(100, total/GOAL*100) + "%";
+  $("goalN").textContent = `${CUR}${Math.round(total)} из ${CUR}${GOAL}`;
+}
+renderGoal();
+
+/* ---- чат ---- */
+const chat = $("chat");
+function addMsg(name, text, color){
+  let html = esc(text).replace(/\[emote:(\d+):([^\]]*)\]/g, (_,id,n)=>`<img alt="${n}" src="https://files.kick.com/emotes/${id}/fullsize">`);
+  const d = document.createElement("div"); d.className = "m";
+  d.innerHTML = `<b style="color:${/^#[0-9a-f]{3,8}$/i.test(color)?color:"#19E3D0"}">${esc(name)}</b>${html}`;
+  chat.appendChild(d);
+  while(chat.children.length > 9) chat.firstChild.remove();
+  setTimeout(()=>d.classList.add("old"), 28000);
+  setTimeout(()=>d.remove(), 29000);
+}
+
+/* ---- донаты (очередь) ---- */
+const queue = []; let busy = false;
+function donate(name, amount, msg){
+  queue.push({name, amount, msg}); if(!busy) next();
+}
+window.donate = donate;
+function burst(){
+  const em = ["💸","🌴","🔥","🥥","✨","🌺"];
+  for(let i=0;i<14;i++){
+    const b = document.createElement("div"); b.className = "bit"; b.textContent = em[i%em.length];
+    b.style.left = (40+Math.random()*20)+"%"; b.style.top = "26%";
+    b.style.setProperty("--x",(Math.random()*520-260)+"px"); b.style.setProperty("--y",(Math.random()*-180+120)+"px"); b.style.setProperty("--r",(Math.random()*500-250)+"deg");
+    document.body.appendChild(b); setTimeout(()=>b.remove(),1800);
+  }
+}
+function next(){
+  const q = queue.shift(); if(!q){ busy=false; return; }
+  busy = true;
+  const el = $("don");
+  $("dWho").textContent = q.name;
+  $("dSum").textContent = CUR + q.amount;
+  $("dMsg").textContent = q.msg || "";
+  el.className = "don on";
+  total += parseFloat(q.amount)||0; renderGoal();
+  const l = $("last"); l.innerHTML = `Последний донат: ${esc(q.name)} <span>${CUR}${esc(q.amount)}</span>`; l.classList.add("on");
+  setTimeout(()=>{ el.className = "don on off"; }, 6200);
+  setTimeout(()=>{ el.className = "don"; next(); }, 6800);
+}
+document.addEventListener("keydown", e => { if(e.key==="d"||e.key==="D") donate("TestUser", 25, "Привет с Пхукета!"); });
+
+/* ---- Kick: чат через Pusher WebSocket (неофициально) ---- */
+const room = P.get("room"), chan = P.get("chan");
+function connect(){
+  const ws = new WebSocket("wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false");
+  ws.onmessage = ev => {
+    let m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+    if(m.event === "pusher:connection_established"){
+      if(room) ws.send(JSON.stringify({event:"pusher:subscribe",data:{auth:"",channel:`chatrooms.${room}.v2`}}));
+      if(chan) ws.send(JSON.stringify({event:"pusher:subscribe",data:{auth:"",channel:`channel.${chan}`}}));
+    } else if(m.event === "pusher:ping"){
+      ws.send(JSON.stringify({event:"pusher:pong",data:{}}));
+    } else if(m.event && m.event.indexOf("ChatMessageEvent") > -1){
+      try{ const d = JSON.parse(m.data); addMsg(d.sender.username, d.content, d.sender.identity && d.sender.identity.color); }catch(e){}
+    } else if(m.event && /Gift/i.test(m.event)){
+      try{ const d = JSON.parse(m.data); const n = (d.sender&&d.sender.username)||d.gifter_username||"Аноним"; const a = d.amount||d.gift&&d.gift.amount||0; donate(n, a, d.message||""); }catch(e){}
+    }
+  };
+  ws.onclose = () => setTimeout(connect, 3000);
+}
+if (room || chan) connect();
+
+/* ---- демо ---- */
+if (P.get("demo")) {
+  const users = [["Nastya_","#FF7AB6"],["mxm_gg","#19E3D0"],["ПхукетФан","#FFB02E"],["deadly77","#9B8CFF"],["kotik","#7CFF8A"]];
+  const texts = ["КРАСОТА!!!","покажи пляж","как там погода?","вайб огонь","а что едим сегодня","привет с Москвы","хаха 😂","дай тук-тук покататься","жара наверное жесть"];
+  setInterval(()=>{ const u=users[Math.floor(Math.random()*users.length)]; addMsg(u[0], texts[Math.floor(Math.random()*texts.length)], u[1]); }, 1500);
+  setTimeout(()=>donate("Nastya_", 10, "На кокос!"), 2500);
+  setInterval(()=>donate(users[Math.floor(Math.random()*users.length)][0], [5,10,25,50,100][Math.floor(Math.random()*5)], "Привет с Пхукета!"), 16000);
+}
+</script>
+</body>
+</html>
