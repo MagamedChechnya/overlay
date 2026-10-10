@@ -11,6 +11,7 @@
   ?chan=ID      id канала Kick (для попытки ловить подарки/донаты)
   ?demo=1       демо: фейковый чат и донаты, чтобы посмотреть оформление
   ?bg=1         шахматный фон для проверки прозрачности
+  ?scale=0.8    уменьшить/увеличить весь оверлей (например 0.8 или 1.2)
   ?loc=Phuket   город, ?country=Thailand  страна
   ?goal=5000    цель по донатам, ?cur=$ валюта
   ?tz=Asia/Bangkok  часовой пояс, ?lat=7.88&lon=98.39 координаты для погоды
@@ -77,6 +78,21 @@ body.checker{background:#6d7a8a linear-gradient(45deg,#00000022 25%,transparent 
 .last.on{opacity:1}
 .last span{color:var(--sun);font-weight:900}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
+
+/* ===== ПОДГОНКА ПОД ТЕЛЕФОН (портрет и ландшафт) ===== */
+.chat{width:min(460px,70vw);max-height:min(46%,calc(100% - 150px));overflow:hidden;gap:4px;padding:6px 8px;-webkit-mask-image:linear-gradient(to top,#000 82%,transparent);mask-image:linear-gradient(to top,#000 82%,transparent)}
+.m{font-size:clamp(14px,min(3.4vw,3.2vh),19px)}
+.loc .t1{font-size:clamp(15px,min(4vw,4vh),19px)}
+.loc .t2{font-size:clamp(11px,min(3vw,3vh),13.5px)}
+.pin{width:clamp(30px,min(9vw,8vh),40px);height:clamp(30px,min(9vw,8vh),40px)}
+@media (orientation:portrait){
+  .goal{right:auto;left:max(14px,env(safe-area-inset-left));top:calc(max(14px,env(safe-area-inset-top)) + 64px);width:min(260px,62vw);text-align:left}
+  .stage{top:calc(max(14px,env(safe-area-inset-top)) + 128px)}
+  .last{display:none}
+}
+@media (orientation:landscape){
+  .last{bottom:auto;top:calc(max(14px,env(safe-area-inset-top)) + 78px)}
+}
 </style>
 </head>
 <body>
@@ -117,6 +133,7 @@ const CUR = P.get("cur") || "$";
 const GOAL = parseFloat(P.get("goal")) || 0;
 const TZ = P.get("tz") || "Asia/Bangkok";
 if (P.get("bg")) document.body.classList.add("checker");
+if (parseFloat(P.get("scale"))) document.body.style.zoom = parseFloat(P.get("scale"));
 if (P.get("loc")) $("city").textContent = P.get("loc");
 if (P.get("country")) $("country").textContent = P.get("country");
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -151,7 +168,7 @@ function addMsg(name, text, color){
   const d = document.createElement("div"); d.className = "m";
   d.innerHTML = `<b style="color:${/^#[0-9a-f]{3,8}$/i.test(color)?color:"#19E3D0"}">${esc(name)}</b>${html}`;
   chat.appendChild(d);
-  while(chat.children.length > 9) chat.firstChild.remove();
+  while(chat.children.length > 9) chat.firstChild.remove(); while(chat.scrollHeight > chat.clientHeight + 1 && chat.children.length > 1) chat.firstChild.remove();
   setTimeout(()=>d.classList.add("old"), 28000);
   setTimeout(()=>d.remove(), 29000);
 }
